@@ -99,6 +99,19 @@ defmodule Weddell.Client do
     GenServer.start_link(__MODULE__, [project, options], gen_server_options)
   end
 
+  def start_without_name do
+    project = Application.get_env(:weddell, :project)
+    options = Application.get_all_env(:weddell)
+	IO.puts "STARTING WITH NO NAME!!, yo, but with #{inspect([project, options])}"
+    GenServer.start(__MODULE__, [project, options])
+  end
+ 
+  def start_link_without_name do
+    GenServer.start_link(__MODULE__, :ok)
+  end
+
+
+
   @spec client(server :: GenServer.server(), timeout :: integer()) :: Client.t()
   def client(server, timeout \\ 5000) do
     GenServer.call(server, {:client}, timeout)
