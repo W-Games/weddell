@@ -102,7 +102,6 @@ defmodule Weddell.Client do
   def start_without_name do
     project = Application.get_env(:weddell, :project)
     options = Application.get_all_env(:weddell)
-	IO.puts "STARTING WITH NO NAME!!, yo, but with #{inspect([project, options])}"
     GenServer.start(__MODULE__, [project, options])
   end
  

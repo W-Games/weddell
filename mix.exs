@@ -36,7 +36,7 @@ defmodule Weddell.Mixfile do
       # GRPC
       {:protobuf, "~> 0.7.0"},
       {:grpc, "~> 0.3"},
-      {:certifi, "~> 2.5"},
+      {:certifi, "~> 2.9.0"},
 
       # Testing
       {:mox, "~> 0.4", only: :test},
