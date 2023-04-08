@@ -269,6 +269,18 @@ defmodule Weddell.Client do
     |> Enum.concat(extra_opts)
   end
 
+  def handle_cast(request, client) do
+    case request do
+      {:publish, messages, topic} ->
+        Publisher.publish(client, messages, topic)
+ 
+      {:client} ->
+        nil
+    end
+ 
+    {:noreply, client}
+  end
+
   @doc false
   def handle_call(request, _, client) do
     case request do
