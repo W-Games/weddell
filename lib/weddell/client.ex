@@ -104,12 +104,12 @@ defmodule Weddell.Client do
     options = Application.get_all_env(:weddell)
     GenServer.start(__MODULE__, [project, options])
   end
- 
+
   def start_link_without_name do
-    GenServer.start_link(__MODULE__, :ok)
+    project = Application.get_env(:weddell, :project)
+    options = Application.get_all_env(:weddell)
+    start_link(project, options)
   end
-
-
 
   @spec client(server :: GenServer.server(), timeout :: integer()) :: Client.t()
   def client(server, timeout \\ 5000) do
@@ -272,11 +272,11 @@ defmodule Weddell.Client do
     case request do
       {:publish, messages, topic} ->
         Publisher.publish(client, messages, topic)
- 
+
       {:client} ->
         nil
     end
- 
+
     {:noreply, client}
   end
 
