@@ -14,10 +14,10 @@ defmodule Weddell.SubscriptionDetailsTest do
 
   describe "SubscriptionDetails.new/1" do
     test "from a Google.Pubsub.V1.Subscription" do
-      topic = Subscription.new(name: Util.full_subscription(@project, @subscription),
+      topic = %Subscription{name: Util.full_subscription(@project, @subscription),
                                topic: Util.full_topic(@project, @topic),
                                ack_deadline_seconds: @deadline,
-                               push_config: @push_config)
+                               push_config: @push_config}
       expected = %SubscriptionDetails{project: @project, name: @subscription, topic: @topic,
                                       ack_deadline_seconds: @deadline,
                                       push_endpoint: @push_config.push_endpoint,

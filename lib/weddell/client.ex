@@ -253,9 +253,9 @@ defmodule Weddell.Client do
     {:ok, channel} =
       Stub.connect("#{host}:#{port}",
         cred: cred,
-        adapter_opts: %{
+        adapter_opts: [
           http2_opts: %{keepalive: :infinity}
-        }
+        ]
       )
 
     {:ok, %__MODULE__{channel: channel, project: project}}
@@ -338,7 +338,7 @@ defmodule Weddell.Client do
   rescue
     # FIXME: This is an ugly way to handle bad gcp credentials
     _ in MatchError ->
-      Logger.warn("Bad GCP Credentials, could not retrieve token")
+      Logger.warning("Bad GCP Credentials, could not retrieve token")
       %{}
   end
 

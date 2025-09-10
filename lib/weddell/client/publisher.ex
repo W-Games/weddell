@@ -28,7 +28,7 @@ defmodule Weddell.Client.Publisher do
 
   @spec create_topic(Client.t, name :: String.t) :: :ok | Client.error
   def create_topic(client, name) do
-    topic = Topic.new(name: Util.full_topic(client.project, name))
+    topic = %Topic{name: Util.full_topic(client.project, name)}
     client.channel
     |> stub_module().create_topic(topic, Client.request_opts())
     |> case do
@@ -39,7 +39,7 @@ defmodule Weddell.Client.Publisher do
 
   @spec delete_topic(Client.t, name :: String.t) :: :ok | Client.error
   def delete_topic(client, name) do
-    request = DeleteTopicRequest.new(topic: Util.full_topic(client.project, name))
+    request = %DeleteTopicRequest{topic: Util.full_topic(client.project, name)}
     client.channel
     |> stub_module().delete_topic(request, Client.request_opts())
     |> case do
@@ -55,9 +55,11 @@ defmodule Weddell.Client.Publisher do
   def topics(client, opts \\ []) do
     max_topics = Keyword.get(opts, :max, @default_list_max)
     cursor = Keyword.get(opts, :cursor, "")
-    request = ListTopicsRequest.new(project: Util.full_project(client.project),
-                                    page_size: max_topics,
-                                    page_token: cursor)
+    request = %ListTopicsRequest{
+      project: Util.full_project(client.project),
+      page_size: max_topics,
+      page_token: cursor
+    }
     client.channel
     |> stub_module().list_topics(request, Client.request_opts())
     |> case do
@@ -78,16 +80,18 @@ defmodule Weddell.Client.Publisher do
       messages
       |> Enum.map(fn
         data when is_binary(data) ->
-          PubsubMessage.new(data: data)
+          %PubsubMessage{data: data}
         attributes when is_map(attributes) ->
-          PubsubMessage.new(attributes: attributes)
+          %PubsubMessage{attributes: attributes}
         {data, attributes} when is_binary(data) and is_map(attributes) ->
-          PubsubMessage.new(data: data, attributes: attributes)
+          %PubsubMessage{data: data, attributes: attributes}
         _message ->
-          PubsubMessage.new()
+          %PubsubMessage{}
       end)
-    request = PublishRequest.new(topic: Util.full_topic(client.project, topic),
-                                 messages: messages)
+    request = %PublishRequest{
+      topic: Util.full_topic(client.project, topic),
+      messages: messages
+    }
     client.channel
     |> stub_module().publish(request, Client.request_opts())
     |> case do
@@ -103,15 +107,18 @@ defmodule Weddell.Client.Publisher do
   def topic_subscriptions(client, topic, opts \\ []) do
     max_topics = Keyword.get(opts, :max, @default_list_max)
     cursor = Keyword.get(opts, :cursor, "")
-    request = ListTopicSubscriptionsRequest.new(topic: Util.full_topic(client.project, topic),
-                                                page_size: max_topics,
-                                                page_token: cursor)
+    request = %ListTopicSubscriptionsRequest{
+      topic: Util.full_topic(client.project, topic),
+      page_size: max_topics,
+      page_token: cursor
+    }
     client.channel
     |> stub_module().list_topic_subscriptions(request, Client.request_opts())
     |> case do
       {:error, _rpc_error} = error -> error
-      {:ok, %ListTopicSubscriptionsResponse{next_page_token: nil} = response} ->
-        {:ok, Enum.map(response.subscriptions, &Util.parse_full_subscription/1)}
+      {:ok, %ListTopicSubscriptionsResponse{next_page_token: next_page_token} = response}
+        when next_page_token in [nil, ""] ->
+          {:ok, Enum.map(response.subscriptions, &Util.parse_full_subscription/1)}
       {:ok, %ListTopicSubscriptionsResponse{next_page_token: next_cursor} = response} ->
         {:ok, Enum.map(response.subscriptions, &Util.parse_full_subscription/1), next_cursor}
     end
