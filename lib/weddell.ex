@@ -14,12 +14,10 @@ defmodule Weddell do
   Start Weddell and connect to the Pub/Sub server.
   """
   def start(_type, _args) do
-    import Supervisor.Spec
-
     children =
       case Application.get_env(:weddell, :no_connect_on_start, false) do
         true -> []
-        false -> [worker(Client, [])]
+        false -> [%{id: Client, start: {Client, :start_link, []}, type: :worker}]
       end
 
     opts = [strategy: :one_for_one, name: __MODULE__]

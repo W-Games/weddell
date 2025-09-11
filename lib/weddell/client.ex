@@ -1,8 +1,13 @@
 defmodule Weddell.Client do
+
+  # Avoid warnings when Goth is not included as a dependency
+  # in projects that don't need authentication.
+  @compile {:no_warn_undefined, Goth.Token}
+
   require Logger
 
   @moduledoc """
-  A persistent process responsible for interacting with Pusub over GRPC.
+  A persistent process responsible for interacting with Pub/Sub over GRPC.
   """
   use GenServer
 
@@ -324,16 +329,13 @@ defmodule Weddell.Client do
   end
 
   defp auth_header do
-    if Code.ensure_compiled?(Goth.Token) and not Application.get_env(:goth, :disabled, false) do
-      case Goth.Token.for_scope("https://www.googleapis.com/auth/pubsub") do
-        {:ok, %{token: token, type: token_type}} ->
-          %{"authorization" => "#{token_type} #{token}"}
-
-        _ ->
-          %{}
-      end
+    with true <- Code.ensure_loaded?(Goth.Token),
+         {:module, Goth.Token} <- Code.ensure_compiled(Goth.Token),
+         false <- Application.get_env(:goth, :disabled, false),
+         {:ok, %{token: token, type: token_type}} <- Goth.Token.for_scope("https://www.googleapis.com/auth/pubsub") do
+      %{"authorization" => "#{token_type} #{token}"}
     else
-      %{}
+      _ -> %{}
     end
   rescue
     # FIXME: This is an ugly way to handle bad gcp credentials
