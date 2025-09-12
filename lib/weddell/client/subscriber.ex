@@ -28,14 +28,15 @@ defmodule Weddell.Client.Subscriber do
     ack_deadline = Keyword.get(opts, :ack_deadline_seconds, 10)
     push_config = case Keyword.get(opts, :push_endpoint, nil) do
       nil -> nil
-      endpoint -> PushConfig.new(push_endpoint: endpoint)
+      endpoint -> %PushConfig{push_endpoint: endpoint}
     end
     subscription =
-      Subscription.new(
+      %Subscription{
         topic: Util.full_topic(client.project, topic),
         name: Util.full_subscription(client.project, name),
         push_config: push_config,
-        ack_deadline_seconds: ack_deadline)
+        ack_deadline_seconds: ack_deadline
+      }
     client.channel
     |> stub_module().create_subscription(subscription, Client.request_opts())
     |> case do
@@ -47,8 +48,9 @@ defmodule Weddell.Client.Subscriber do
   @spec delete_subscription(Client.t, name :: String.t) :: :ok | Client.error
   def delete_subscription(client, name) do
     request =
-      DeleteSubscriptionRequest.new(
-        subscription: Util.full_subscription(client.project, name))
+      %DeleteSubscriptionRequest{
+        subscription: Util.full_subscription(client.project, name)
+      }
     client.channel
     |> stub_module().delete_subscription(request, Client.request_opts())
     |> case do
@@ -64,16 +66,19 @@ defmodule Weddell.Client.Subscriber do
   def subscriptions(client, opts \\ []) do
     max_topics = Keyword.get(opts, :max, @default_list_max)
     cursor = Keyword.get(opts, :cursor, "")
-    request = ListSubscriptionsRequest.new(project: Util.full_project(client.project),
-                                    page_size: max_topics,
-                                    page_token: cursor)
+    request = %ListSubscriptionsRequest{
+      project: Util.full_project(client.project),
+      page_size: max_topics,
+      page_token: cursor
+    }
     client.channel
     |> stub_module().list_subscriptions(request, Client.request_opts())
     |> case do
       {:error, _rpc_error} = error -> error
-      {:ok, %ListSubscriptionsResponse{next_page_token: nil} = response} ->
-        details = Enum.map(response.subscriptions, &(SubscriptionDetails.new(&1)))
-        {:ok, details}
+      {:ok, %ListSubscriptionsResponse{next_page_token: next_page_token} = response}
+        when next_page_token in [nil, ""] ->
+          details = Enum.map(response.subscriptions, &(SubscriptionDetails.new(&1)))
+          {:ok, details}
       {:ok, %ListSubscriptionsResponse{next_page_token: next_cursor} = response} ->
         details = Enum.map(response.subscriptions, &(SubscriptionDetails.new(&1)))
         {:ok, details, next_cursor}
@@ -84,10 +89,11 @@ defmodule Weddell.Client.Subscriber do
     {:ok, [Message.t]} | Client.error
   def pull(client, subscription, opts \\ []) do
     request =
-      PullRequest.new(
+      %PullRequest{
         subscription: Util.full_subscription(client.project, subscription),
         return_immediately: Keyword.get(opts, :return_immediately, true),
-        max_messages: Keyword.get(opts, :max_messages, 1))
+        max_messages: Keyword.get(opts, :max_messages, 1)
+      }
     client.channel
     |> stub_module().pull(request, Client.request_opts())
     |> case do
@@ -104,9 +110,10 @@ defmodule Weddell.Client.Subscriber do
     do: acknowledge(client, [message], subscription)
   def acknowledge(client, messages, subscription) do
     request =
-      AcknowledgeRequest.new(
+      %AcknowledgeRequest{
         subscription: Util.full_subscription(client.project, subscription),
-        ack_ids: Enum.map(messages, &(&1.ack_id)))
+        ack_ids: Enum.map(messages, &(&1.ack_id))
+      }
     client.channel
     |> stub_module().acknowledge(request, Client.request_opts())
     |> case do

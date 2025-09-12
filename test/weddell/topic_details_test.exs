@@ -10,7 +10,7 @@ defmodule Weddell.TopicDetailsTest do
 
   describe "TopicDetails.new/1" do
     test "from a Google.Pubsub.V1.Topic" do
-      topic = Topic.new(name: Util.full_topic(@project, @topic))
+      topic = %Topic{name: Util.full_topic(@project, @topic)}
       assert %TopicDetails{project: @project, name: @topic} ==
         TopicDetails.new(topic)
     end

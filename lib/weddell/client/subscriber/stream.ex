@@ -40,8 +40,10 @@ defmodule Weddell.Client.Subscriber.Stream do
                   subscription: subscription,
                   grpc_stream: Stub.streaming_pull(client.channel, Client.request_opts(timeout: :infinity))}
     request =
-      StreamingPullRequest.new(subscription: Util.full_subscription(client.project, subscription),
-                               stream_ack_deadline_seconds: @default_ack_deadline)
+      %StreamingPullRequest{
+        subscription: Util.full_subscription(client.project, subscription),
+        stream_ack_deadline_seconds: @default_ack_deadline
+      }
     stream.grpc_stream
     |> GRPCStub.send_request(request)
     stream
@@ -60,8 +62,9 @@ defmodule Weddell.Client.Subscriber.Stream do
   @spec close(t) :: :ok
   def close(stream) do
     request =
-      StreamingPullRequest.new(
-        subscription: Util.full_subscription(stream.client.project, stream.subscription))
+      %StreamingPullRequest{
+        subscription: Util.full_subscription(stream.client.project, stream.subscription)
+      }
     GRPCStub.send_request(stream.grpc_stream, request, end_stream: true)
   end
 
@@ -113,11 +116,12 @@ defmodule Weddell.Client.Subscriber.Stream do
       opts
       |> Keyword.get(:stream_deadline, @default_ack_deadline)
     request =
-      StreamingPullRequest.new(
+      %StreamingPullRequest{
         ack_ids: ack_ids,
         modify_deadline_ack_ids: deadline_ack_ids,
         modify_deadline_seconds: deadline_seconds,
-        stream_ack_deadline_seconds: stream_deadline)
+        stream_ack_deadline_seconds: stream_deadline
+      }
     GRPCStub.send_request(stream.grpc_stream, request)
   end
 

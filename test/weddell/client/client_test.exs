@@ -48,7 +48,7 @@ defmodule Weddell.ClientTest do
     end
   end
 
-  defp wait_for_server(server, 0) do
+  defp wait_for_server(_server, 0) do
     nil
   end
 

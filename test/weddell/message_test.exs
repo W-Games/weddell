@@ -16,12 +16,12 @@ defmodule Weddell.MessageTest do
         DateTime.utc_now() |> DateTime.to_unix()
       attributes = %{"key1" => "val1", "key2" => "val2"}
       pubsub_message =
-        PubsubMessage.new(data: @data,
+        %PubsubMessage{data: @data,
                           attributes: attributes,
                           message_id: @id,
-                          publish_time: Timestamp.new(seconds: now))
+                          publish_time: %Timestamp{seconds: now}}
       received_message =
-        ReceivedMessage.new(%{ack_id: @ack_id, message: pubsub_message})
+        %ReceivedMessage{ack_id: @ack_id, message: pubsub_message}
       assert %Message{id: @id,
                       ack_id: @ack_id,
                       published_at: DateTime.from_unix!(now),

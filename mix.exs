@@ -1,13 +1,13 @@
 defmodule Weddell.Mixfile do
   use Mix.Project
 
-  @version "0.4.6"
+  @version "0.4.7"
 
   def project do
     [
       app: :weddell,
       version: @version,
-      elixir: "~> 1.5",
+      elixir: "~> 1.17",
       elixirc_paths: elixirc_paths(Mix.env()),
       start_permanent: Mix.env() == :prod,
       deps: deps(),
@@ -34,8 +34,8 @@ defmodule Weddell.Mixfile do
   defp deps do
     [
       # GRPC
-      {:protobuf, "~> 0.7.0"},
-      {:grpc, "~> 0.3"},
+      {:protobuf, "~> 0.15"},
+      {:grpc, "~> 0.10.2"},
       {:certifi, "~> 2.9.0"},
 
       # Testing
