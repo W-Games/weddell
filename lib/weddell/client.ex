@@ -9,6 +9,15 @@ defmodule Weddell.Client do
   alias GRPC.{Stub, RPCError}
   alias Weddell.Client.{Publisher, Subscriber}
 
+  # Cumulative publish stats, logged at most once per interval from the
+  # publish paths below. Slots: published count, failed count, and the
+  # monotonic ms timestamp of the last stats log line.
+  @publish_stats_key {__MODULE__, :publish_stats}
+  @stats_interval_ms 10 * 60 * 1000
+  @stats_published_ix 1
+  @stats_failed_ix 2
+  @stats_last_report_ix 3
+
   @default_host "pubsub.googleapis.com"
   @default_port 443
 
@@ -271,7 +280,18 @@ defmodule Weddell.Client do
   def handle_cast(request, client) do
     case request do
       {:publish, messages, topic} ->
-        Publisher.publish(client, messages, topic)
+        case Publisher.publish(client, messages, topic) do
+          :ok ->
+            record_publish_result(:ok, messages)
+
+          error ->
+            record_publish_result(error, messages)
+
+            Logger.error(
+              "WEDDELL async publish to #{inspect(topic)} failed and message(s) were dropped: " <>
+                "#{inspect(error)} messages=#{inspect(messages)}"
+            )
+        end
 
       {:client} ->
         nil
@@ -293,7 +313,9 @@ defmodule Weddell.Client do
         {:reply, Publisher.topics(client, opts), client}
 
       {:publish, messages, topic} ->
-        {:reply, Publisher.publish(client, messages, topic), client}
+        result = Publisher.publish(client, messages, topic)
+        record_publish_result(result, messages)
+        {:reply, result, client}
 
       {:topic_subscriptions, topic, opts} ->
         {:reply, Publisher.topic_subscriptions(client, topic, opts), client}
@@ -315,6 +337,68 @@ defmodule Weddell.Client do
 
       {:client} ->
         {:reply, client, client}
+    end
+  end
+
+  # Count the publish outcome and emit the periodic stats line when due.
+  # Counters are :atomics referenced from :persistent_term, so totals
+  # accumulate across all client processes and survive their restarts;
+  # they reset only when the node restarts.
+  defp record_publish_result(result, messages) do
+    ref = publish_stats()
+    count = message_count(messages)
+
+    ix =
+      case result do
+        :ok -> @stats_published_ix
+        _ -> @stats_failed_ix
+      end
+
+    :atomics.add(ref, ix, count)
+    maybe_log_publish_stats(ref)
+  end
+
+  # Log at most once per @stats_interval_ms across all publishing
+  # processes — compare_exchange on the timestamp slot makes sure only
+  # one process wins the right to log for a given interval.
+  defp maybe_log_publish_stats(ref) do
+    now = System.monotonic_time(:millisecond)
+    last = :atomics.get(ref, @stats_last_report_ix)
+
+    if now - last >= @stats_interval_ms and
+         :atomics.compare_exchange(ref, @stats_last_report_ix, last, now) == :ok do
+      log_publish_stats(ref)
+    end
+  end
+
+  defp log_publish_stats(ref) do
+    Logger.warn(
+      "WEDDELL publish stats: " <>
+        "published=#{:atomics.get(ref, @stats_published_ix)} " <>
+        "failed=#{:atomics.get(ref, @stats_failed_ix)}"
+    )
+  end
+
+  defp publish_stats do
+    case :persistent_term.get(@publish_stats_key, nil) do
+      nil ->
+        ref = :atomics.new(3, signed: true)
+        :atomics.put(ref, @stats_last_report_ix, System.monotonic_time(:millisecond))
+        :persistent_term.put(@publish_stats_key, ref)
+        # First stats line right away — confirms the marker is live.
+        log_publish_stats(ref)
+        ref
+
+      ref ->
+        ref
+    end
+  end
+
+  # A publish request carries either a single message or a list of them.
+  defp message_count(messages) do
+    case messages do
+      messages when is_list(messages) -> length(messages)
+      _ -> 1
     end
   end
 
